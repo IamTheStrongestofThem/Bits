@@ -173,3 +173,69 @@ Commands:
   help                   Show this help
   exit                   Quit Bits
 """)
+# ---------- Start Menu Apps ----------
+USER_START_MENU = r"C:\Users\S C\AppData\Roaming\Microsoft\Windows\Start Menu\Programs"
+SYSTEM_START_MENU = r"C:\ProgramData\Microsoft\Windows\Start Menu\Programs"
+
+# Cache Start Menu apps
+def get_start_menu_apps():
+    apps = {}
+    for path in [USER_START_MENU, SYSTEM_START_MENU]:
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                if file.endswith(".lnk"):
+                    full_path = os.path.join(root, file)
+                    app_name = os.path.splitext(file)[0]
+                    key_name = app_name.replace(" ", "_").lower()
+                    apps[key_name] = full_path
+    return apps
+
+START_MENU_APPS = get_start_menu_apps()
+
+
+# ---------- Open App Function ----------
+def open_app(name_or_path):
+    """Open a Start Menu app, alias, or direct path."""
+    # Check alias first
+    alias = fuzzy_alias(name_or_path) or name_or_path
+    cmd = cfg.get("aliases", {}).get(alias, alias)
+
+    # Try direct path/alias first
+    if os.path.isfile(cmd):
+        try:
+            os.startfile(cmd)
+            print(f"Opening: {alias}")
+            return
+        except Exception as e:
+            print("Failed to open:", e)
+            return
+
+    # If not a direct file, check Start Menu apps
+    key = name_or_path.replace(" ", "_").lower()
+    if key in START_MENU_APPS:
+        try:
+            subprocess.run(["start", "", START_MENU_APPS[key]], shell=True)
+            print(f"Opening Start Menu app: {name_or_path}")
+            return
+        except Exception as e:
+            print(f"Failed to open {name_or_path}:", e)
+            return
+
+    # Fallback: try fuzzy match in Start Menu apps
+    alt = difflib.get_close_matches(key, START_MENU_APPS.keys(), n=1, cutoff=0.6)
+    if alt:
+        try:
+            subprocess.run(["start", "", START_MENU_APPS[alt[0]]], shell=True)
+            print(f"Opening closest match: {alt[0]}")
+            return
+        except Exception as e:
+            print(f"Failed to open {alt[0]}:", e)
+            return
+
+    print(f"App '{name_or_path}' not found!")
+    print("Available aliases:")
+    for a in sorted(cfg.get("aliases", {}).keys()):
+        print(" -", a)
+    print("Available Start Menu apps (spaces -> underscores):")
+    for a in sorted(START_MENU_APPS.keys()):
+        print(" -", a)
