@@ -26,7 +26,7 @@ Bits is a **Windows-only terminal assistant** that allows you to control applica
 
 ### 1. Clone the repository
 ```go
-git clone https://github.com/<your-username>/bits.git
+git clone https://github.com/IamTheStrongestofThem/bits.git
 cd bits
 pip install requirements.txt
 python bits.py
